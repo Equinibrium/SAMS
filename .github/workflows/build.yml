@@ -1,0 +1,41 @@
+name: SLC Execution Gate CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile gate core with strict warnings
+        run: cc -std=c11 -Wall -Wextra -Werror -I main main/slc_gate.c tests/test_slc_gate.c -o /tmp/test_slc_gate
+      - name: Run gate core tests
+        run: /tmp/test_slc_gate
+
+  esp-idf-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build firmware for ESP32-S3
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.2
+          target: esp32s3
+          path: .
+      - name: Upload firmware build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: slc-esp32-firmware
+          path: |
+            build/*.bin
+            build/*.elf
+            build/flasher_args.json
+          if-no-files-found: error
