@@ -1,71 +1,53 @@
-SAMS - Semantic Atom Management Stack
-SAMS is a high-performance, memory-safe communication stack designed for industrial IPC and Edge-to-Cloud telemetry. It centers around a deterministic 32-byte Semantic Atom, ensuring zero-copy efficiency across heterogeneous systems from Cortex-M4 sensors to Linux-based Edge AI.
+# SLC Execution Gate — ESP32-S3 prototype
 
-🚀 Project Status: Foundation Phase
-Current Stage: This repository represents the Specification & Architectural Baseline.
-It is currently being developed under the NLnet Sovereign Grid Network initiative.
+This repository is being repurposed on branch `feat/slc-esp32-execution-gate` for an experimental software SLC (Semantic Logic Core) execution gate targeting the Waveshare ESP32-S3-LCD-1.47 (SKU 28317).
 
-Component	Status	Target Milestone
-32-bit Core Atom Structure	✅ Ready	Foundation
-High-Performance IPC Transport	🔄 Planned	Milestone T1
-Advanced Serialization (Codec)	🔄 Scaffold	Milestone T3
-PQC Security Layer (Shield)	🔄 Scaffold	Milestone T4
-🧬 The 32-Byte Semantic Atom
-The core of SAMS is a fixed-size, 32-byte deterministic packet. It is designed to be Zero-Copy, meaning it can be cast directly from raw bytes to a Rust struct without any CPU overhead.
+## Scope of this first milestone
 
-Plaintext
-┌─────────────────────────────────────────────────────────────┐
-│                   Semantic Atom (32 bytes)                  │
-├─────────────────────────────────────────────────────────────┤
-│ Bytes 0-3   │ entity_id     │ Unique Entity identifier      │
-│ Bytes 4-7   │ sequence      │ Monotonic Sequence number     │
-│ Bytes 8-11  │ value_fixed   │ Fixed-point value (x100)      │
-│ Bytes 12-15 │ status_flags  │ Status and metadata           │
-│ Bytes 16-23 │ timestamp_us  │ Microsecond timestamp         │
-│ Bytes 24-25 │ node_id       │ Source Node identifier        │
-│ Bytes 26-27 │ telemetry_type│ Standardized Data Type        │
-│ Bytes 28-31 │ trust_pqc     │ Trust level + PQC Anchor      │
-└─────────────────────────────────────────────────────────────┘
-🛠️ Architecture Overview
-SAMS provides a unified API that bridges the gap between bare-metal hardware and enterprise analytics.
+- Build firmware for ESP32-S3 with ESP-IDF in GitHub Actions, avoiding a local ESP toolchain on macOS.
+- Exercise a small, deterministic COMMIT/REJECT gate against a harmless virtual effect.
+- Show a visual hardware smoke test on the ST7789 LCD.
+- Run host-side C tests against the same `slc_gate.c` implementation used by the firmware.
 
-Supported Targets
-Embedded (no_std): ARM Cortex-M4, M7, M85 (e.g., STM32, i.MX RT).
-Enterprise (std): Linux x86_64, ARM64 (Edge Servers, Cloud).
-WebAssembly: Planned for browser-based monitoring.
-📋 Development Roadmap
-Milestone T1: IPC Transport – Implementation of zero-copy shared memory and Zenoh-pico transport.
-Milestone T2: Security Framework – Validation logic and trust management.
-Milestone T3: High-Speed Codec – Optimized batch processing for high-frequency data.
-Milestone T4: SAMS Shield – Post-Quantum Cryptography (PQC) and data anonymization.
-⚡ Quick Start
-Embedded (Bare-metal)
-Add to Cargo.toml:
+## Important security boundary
 
-Ini, TOML
-[dependencies]
-sams = { version = "0.1.0", default-features = false, features = ["embedded"] }
-Linux / Desktop
-Ini, TOML
-[dependencies]
-sams = { version = "0.1.0", features = ["std"] }
-Basic Example
-Rust
-use sams::types::{SemanticAtom, telemetry};
+This is an experimental prototype, not an EABC conformance claim and not a production safety controller.
 
-fn main() {
-    let mut atom = SemanticAtom::new();
-    atom.entity_id = 1001;
-    atom.set_value(22.5); // Fixed-point conversion handled automatically
-    atom.telemetry_type = telemetry::TEMPERATURE_C;
-    
-    // Direct zero-copy access to bytes for transmission
-    let raw_data: &[u8; 32] = atom.as_bytes();
-}
-🛡️ Security & Compliance
-Designed with a focus on future EU regulations:
-Cyber Resilience Act: Security-by-design at the protocol level.
-Data Act: Enabling secure, verifiable industrial data sharing.
-AI Act: Providing high-quality, traceable telemetry for AI processing.
-🤝 Acknowledgments
-Developed with funding from NLnet Foundation as part of the NGI Search program.
+In this first milestone, `signature_valid` and `issuer_authorized` are inputs to the gate representing results that a future EGA/crypto adapter must establish. They are **not cryptographically verified by this implementation**. Never connect this prototype to a real actuator or use it to control a physical process.
+
+The gate checks:
+- authorization/signature and issuer-policy result flags;
+- action and target binding;
+- payload-digest binding;
+- epoch and validity interval;
+- replay of a bounded set of nonces;
+- that the virtual effect callback is called only after the checks pass.
+
+Replay protection is a bounded RAM cache for demonstration. It is not persistent across reboot and is not a substitute for a production replay/nonce design.
+
+## Hardware
+
+Board: Waveshare ESP32-S3-LCD-1.47, not the 1.47B variant.
+
+According to the Waveshare model-specific documentation:
+- LCD: ST7789, 172 × 320
+- MOSI GPIO45, SCLK GPIO40, CS GPIO42, DC GPIO41, RST GPIO39, BL GPIO48
+
+## Build
+
+GitHub Actions builds with Espressif ESP-IDF v5.3.2 for `esp32s3`. The workflow also compiles and runs host-side tests for the gate core.
+
+The CI artifact is a build output, not yet validated on physical hardware.
+
+## Local host test
+
+On a machine with a C compiler:
+
+```sh
+cc -std=c11 -Wall -Wextra -Werror -I main main/slc_gate.c tests/test_slc_gate.c -o /tmp/test_slc_gate
+/tmp/test_slc_gate
+```
+
+## First hardware validation
+
+After a successful CI build, download the artifact and inspect the generated flash arguments before flashing. Preserve the current flash dump. Do not erase the chip. Hardware flashing and LCD verification are separate steps and require explicit review of the produced artifact and flash offsets.
