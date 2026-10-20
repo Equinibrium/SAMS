@@ -35,7 +35,8 @@ jobs:
         with:
           name: slc-esp32-firmware
           path: |
-            build/*.bin
-            build/*.elf
+            build/**/*.bin
+            build/**/*.elf
             build/flasher_args.json
+            build/**/flasher_args.json
           if-no-files-found: error
