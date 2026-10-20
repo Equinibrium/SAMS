@@ -69,7 +69,7 @@ static esp_err_t lcd_init(void)
 
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = LCD_PIN_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16,
     };
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_st7789(io, &panel_config, &panel), TAG, "ST7789 init failed");
@@ -78,8 +78,8 @@ static esp_err_t lcd_init(void)
     ESP_LOGI(TAG, "LCD init: Panel reset");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_init(panel), TAG, "LCD panel init failed");
     ESP_LOGI(TAG, "LCD init: Panel initialized");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_invert_color(panel, true), TAG, "LCD invert failed");
-    ESP_LOGI(TAG, "LCD init: Color inverted");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_invert_color(panel, false), TAG, "LCD invert failed");
+    ESP_LOGI(TAG, "LCD init: Color not inverted");
     ESP_RETURN_ON_ERROR(esp_lcd_panel_disp_on_off(panel, true), TAG, "LCD display enable failed");
     ESP_LOGI(TAG, "LCD init: Display enabled");
     return ESP_OK;
