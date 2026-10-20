@@ -134,6 +134,9 @@ void app_main(void)
             ESP_LOGI(TAG, "Now filling with blue");
             if (lcd_fill(0x001F) != ESP_OK) {
                 ESP_LOGE(TAG, "LCD blue fill failed");
+            } else {
+                ESP_LOGI(TAG, "LCD blue fill OK, waiting 5s");
+                vTaskDelay(pdMS_TO_TICKS(5000));
             }
         }
     }
